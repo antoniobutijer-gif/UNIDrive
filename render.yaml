@@ -1,0 +1,41 @@
+# ============================================================================
+#  Render Blueprint za UNIDrive backend (Node/Express + Aiven MySQL)
+#  Render → New + → Blueprint → odaberi ovaj repozitorij → ispuni tajne env var.
+# ============================================================================
+services:
+  - type: web
+    name: unidrive-backend
+    runtime: node
+    rootDir: backend            # backend kod je u podmapi /backend
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # JWT tajni ključ – Render ga automatski generira
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DB_SSL
+        value: "true"
+      # AAI mock prijava (prototip)
+      - key: AAI_ALLOW_DEV_LOGIN
+        value: "true"
+      # --- Tajne vrijednosti: unose se u Render dashboardu (Environment) ---
+      - key: DB_HOST          # npr. unidrive-db-xxxx.aivencloud.com
+        sync: false
+      - key: DB_PORT          # npr. 26062
+        sync: false
+      - key: DB_USER          # avnadmin
+        sync: false
+      - key: DB_PASSWORD      # Aiven lozinka
+        sync: false
+      - key: DB_NAME          # unidrive
+        sync: false
+      # CA certifikat: zalijepi CIJELI sadržaj ca.pem (uključujući BEGIN/END linije)
+      - key: DB_CA_CERT
+        sync: false
+      # Izvor frontenda za CORS: tvoj GitHub Pages URL (ili "*" za demo)
+      - key: CLIENT_ORIGIN
+        sync: false

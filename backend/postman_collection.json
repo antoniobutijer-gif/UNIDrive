@@ -1,0 +1,140 @@
+{
+  "info": {
+    "name": "UNIDrive API",
+    "description": "Integracijsko testiranje REST API-ja (pogl. 7.5). Postavi varijable {{baseUrl}} i {{token}}.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:4000/api" },
+    { "key": "token", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Auth – AAI login (FZ-1)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{baseUrl}}/auth/aai/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"mkovac@student.unidu.hr\",\n  \"first_name\": \"Marta\",\n  \"last_name\": \"Kovač\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Me (FZ-1)",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{baseUrl}}/auth/me"
+      }
+    },
+    {
+      "name": "Update profile (FZ-2)",
+      "request": {
+        "method": "PUT",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "url": "{{baseUrl}}/users/me",
+        "body": { "mode": "raw", "raw": "{\n  \"phone\": \"+385990000000\",\n  \"ride_pref\": \"driver\"\n}" }
+      }
+    },
+    {
+      "name": "Search rides (FZ-3/4)",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{baseUrl}}/rides?destination=Kampus&preferences=klima"
+      }
+    },
+    {
+      "name": "Create ride (FZ-7)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "url": "{{baseUrl}}/rides",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"origin\": \"Lapad\",\n  \"destination\": \"Kampus\",\n  \"departure_time\": \"2026-07-01 07:40:00\",\n  \"seats_available\": 3,\n  \"price\": 2.50,\n  \"preferences\": [\"klima\", \"glazba\"]\n}"
+        }
+      }
+    },
+    {
+      "name": "Book ride (FZ-5)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "url": "{{baseUrl}}/rides/1/bookings",
+        "body": { "mode": "raw", "raw": "{\n  \"seats\": 1\n}" }
+      }
+    },
+    {
+      "name": "Cancel booking (FZ-6)",
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{baseUrl}}/bookings/1/cancel"
+      }
+    },
+    {
+      "name": "Ride passengers (FZ-9)",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{baseUrl}}/rides/1/passengers"
+      }
+    },
+    {
+      "name": "History (FZ-10)",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{baseUrl}}/users/me/history"
+      }
+    },
+    {
+      "name": "Create review (FZ-11)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "url": "{{baseUrl}}/reviews",
+        "body": { "mode": "raw", "raw": "{\n  \"reviewee_id\": 2,\n  \"ride_id\": 1,\n  \"rating\": 5,\n  \"comment\": \"Odlična vožnja!\"\n}" }
+      }
+    },
+    {
+      "name": "Notifications (FZ-12)",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{baseUrl}}/notifications"
+      }
+    },
+    {
+      "name": "Admin – users (FZ-13)",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{baseUrl}}/admin/users"
+      }
+    },
+    {
+      "name": "Admin – stats (FZ-14)",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{baseUrl}}/admin/stats"
+      }
+    }
+  ]
+}

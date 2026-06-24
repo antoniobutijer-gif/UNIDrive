@@ -1,0 +1,20 @@
+{
+  "name": "UNIDrive – Suprijevoz",
+  "short_name": "UNIDrive",
+  "description": "Suprijevoz i dijeljenje prijevoza za studente Sveučilišta u Dubrovniku",
+  "lang": "hr",
+  "start_url": "./UNIDrive.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#2A2D9E",
+  "theme_color": "#3538CD",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
