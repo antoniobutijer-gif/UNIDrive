@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+
+<!-- PWA (instalacija na početni zaslon, fullscreen, offline) -->
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#3538CD">
+<meta name="description" content="Suprijevoz za studente Sveučilišta u Dubrovniku">
+<link rel="icon" type="image/svg+xml" href="./icon.svg">
+<link rel="apple-touch-icon" href="./icon.svg">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="UNIDrive">
+<script>
+  // Registriraj service worker samo na deployu (ne lokalno, da ne ometa razvoj).
+  if ('serviceWorker' in navigator &&
+      location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('./sw.js').catch(function () {});
+    });
+  }
+</script>
+
+<script src="./config.js"></script>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;}
+  :root{
+    --bg:#F3F4FA; --surface:#FFFFFF; --surface-2:#EEF0F7; --border:#E5E7F1;
+    --text:#161826; --muted:#5C6175; --faint:#8A8FA6;
+    --primary:#3538CD; --primary-press:#2A2DA8; --primary-soft:#EAEBFB; --on-primary:#FFFFFF;
+    --success:#1A8F5C; --success-soft:#E2F3EA; --danger:#D2452E; --danger-soft:#FBE7E2;
+    --warning:#9C6E12; --warning-soft:#F6EED5; --star:#E2982B;
+    --map-bg:#E9EDF5; --sea:#D6E4F0; --block:#DFE3EF; --road:#FFFFFF;
+    --shadow:0 1px 2px rgba(20,22,40,.05),0 6px 20px rgba(20,22,40,.06);
+  }
+  [data-theme="dark"]{
+    --bg:#0E1017; --surface:#191C26; --surface-2:#222633; --border:#2A2F3E;
+    --text:#F0F1F7; --muted:#A4A9BC; --faint:#6C7286;
+    --primary:#7C80F2; --primary-press:#9296FF; --primary-soft:#23274A; --on-primary:#0E1017;
+    --success:#3FBF80; --success-soft:#16301F; --danger:#F0735C; --danger-soft:#341A16;
+    --warning:#E0A93B; --warning-soft:#322710; --star:#EAB354;
+    --map-bg:#141823; --sea:#15233A; --block:#222736; --road:#2C3344;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.35);
+  }
+  ::-webkit-scrollbar{width:0;height:0;}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
+</style>
+</helmet>
+
+<div style="position:fixed; inset:0; display:flex; justify-content:center; background:#15171f; font-family:'Manrope',system-ui,sans-serif;">
+
+  <sc-if value="{{ showToolbar }}" hint-placeholder-val="{{ true }}">
+  <div style="width:100%; max-width:440px; background:#fff; border:1px solid #DADCE6; border-radius:18px; padding:14px 16px; box-shadow:0 2px 10px rgba(20,22,40,.05);">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+      <div style="display:flex; align-items:center; gap:9px;">
+        <div style="width:24px; height:24px; border-radius:7px; background:#3538CD; display:flex; align-items:center; justify-content:center;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l1.6-4.6A2 2 0 0 1 8.5 7h7a2 2 0 0 1 1.9 1.4L19 13M5 13h14v4H5zM8 17v0M16 17v0"/></svg>
+        </div>
+        <span style="font-size:14px; font-weight:800; color:#161826; letter-spacing:-.2px;">UNIDrive<span style="color:#8A8FA6; font-weight:600;"> · prototip</span></span>
+      </div>
+      <button onClick="{{ toggleDark }}" style="display:flex; align-items:center; gap:7px; padding:7px 12px; border-radius:999px; border:1px solid #D5D7E2; background:#F4F5FA; color:#3A3D4D; font-family:inherit; font-size:12.5px; font-weight:700; cursor:pointer;">
+        <sc-if value="{{ darkOn }}" hint-placeholder-val="{{ false }}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4 12H2M22 12h-2M5 5l1.4 1.4M17.6 17.6 19 19M19 5l-1.4 1.4M6.4 17.6 5 19"/></svg> Svijetlo</sc-if>
+        <sc-if value="{{ lightOn }}" hint-placeholder-val="{{ true }}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg> Tamno</sc-if>
+      </button>
+    </div>
+    <div style="display:flex; flex-wrap:wrap; gap:7px;">
+      <button onClick="{{ goLogin }}" style="{{ pLogin }}">Login</button>
+      <button onClick="{{ goSearch }}" style="{{ pSearch }}">Pretraga</button>
+      <button onClick="{{ goDetail }}" style="{{ pDetail }}">Detalj + ruta</button>
+      <button onClick="{{ goNew }}" style="{{ pNew }}">Nova vožnja</button>
+      <button onClick="{{ goRes }}" style="{{ pRes }}">Rezervacije</button>
+      <button onClick="{{ goProfile }}" style="{{ pProfile }}">Profil</button>
+      <button onClick="{{ goNotif }}" style="{{ pNotif }}">Notifikacije</button>
+    </div>
+  </div>
+  </sc-if>
+
+  <!-- Fullscreen prikaz: bez okvira telefona (IOSDevice) -->
+
+    <div data-theme="{{ theme }}" style="width:100%; max-width:520px; height:100%; display:flex; flex-direction:column; background:var(--bg); color:var(--text); font-family:'Manrope',system-ui,sans-serif; -webkit-font-smoothing:antialiased; position:relative; overflow:hidden; box-shadow:0 0 60px rgba(0,0,0,.25);">
+
+      <!-- ============ LOGIN ============ -->
+      <sc-if value="{{ isLogin }}" hint-placeholder-val="{{ true }}">
+      <div style="height:100%; display:flex; flex-direction:column; background:linear-gradient(165deg,#3A3DD4 0%,#2A2D9E 55%,#212372 100%); padding:0 28px; position:relative; overflow:hidden;">
+        <div style="position:absolute; top:-90px; right:-70px; width:260px; height:260px; border-radius:50%; background:rgba(255,255,255,.06);"></div>
+        <div style="position:absolute; bottom:60px; left:-90px; width:240px; height:240px; border-radius:50%; background:rgba(255,255,255,.05);"></div>
+
+        <div style="flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; position:relative; z-index:2;">
+          <div style="width:78px; height:78px; border-radius:24px; background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.22); display:flex; align-items:center; justify-content:center; margin-bottom:26px; box-shadow:0 16px 40px rgba(0,0,0,.25);">
+            <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l1.6-4.6A2 2 0 0 1 8.5 7h7a2 2 0 0 1 1.9 1.4L19 13M5 13h14v4H5z"/><circle cx="8" cy="17" r="1.3"/><circle cx="16" cy="17" r="1.3"/></svg>
+          </div>
+          <div style="font-size:38px; font-weight:800; color:#fff; letter-spacing:-1px; line-height:1;">UNIDrive</div>
+          <div style="margin-top:14px; font-size:15px; line-height:1.5; color:rgba(255,255,255,.78); max-width:250px; font-weight:500;">Suprijevoz za studente Sveučilišta u Dubrovniku</div>
+        </div>
+
+        <div style="position:relative; z-index:2; padding-bottom:46px;">
+          <button onClick="{{ loginAAI }}" style="width:100%; display:flex; align-items:center; justify-content:center; gap:11px; background:#fff; color:#2A2D9E; border:none; border-radius:16px; padding:17px 20px; font-family:inherit; font-size:16px; font-weight:800; cursor:pointer; box-shadow:0 10px 30px rgba(0,0,0,.22);" style-active="transform:scale(.985)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2A2D9E" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M10 17l5-5-5-5M15 12H3"/></svg>
+            Prijavi se putem AAI@EduHr
+          </button>
+          <div style="display:flex; align-items:center; justify-content:center; gap:7px; margin-top:18px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.6)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+            <span style="font-size:12.5px; color:rgba(255,255,255,.6); font-weight:500;">Pristup isključivo s AAI@EduHr identitetom</span>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ PRETRAGA ============ -->
+      <sc-if value="{{ isSearch }}">
+      <div style="height:100%; display:flex; flex-direction:column;">
+        <div style="flex:none; padding:56px 20px 14px; display:flex; align-items:flex-start; justify-content:space-between;">
+          <div>
+            <div style="font-size:12px; font-weight:700; color:var(--faint); letter-spacing:.5px; text-transform:uppercase;">Dobro jutro</div>
+            <div style="font-size:25px; font-weight:800; letter-spacing:-.6px; margin-top:3px;">Kamo putuješ?</div>
+          </div>
+          <button onClick="{{ goNotif }}" style="position:relative; width:42px; height:42px; border-radius:13px; background:var(--surface); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--text); box-shadow:var(--shadow);">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+            <span style="position:absolute; top:9px; right:10px; width:8px; height:8px; border-radius:50%; background:var(--danger); border:2px solid var(--surface);"></span>
+          </button>
+        </div>
+
+        <div style="flex:1; overflow:auto; padding:0 20px 96px; animation:fadeUp .28s ease;">
+          <!-- search card -->
+          <div style="background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:8px; box-shadow:var(--shadow); position:relative;">
+            <div style="display:flex; align-items:center; gap:12px; padding:13px 12px;">
+              <span style="width:11px; height:11px; border-radius:50%; border:3px solid var(--primary); flex:none;"></span>
+              <div style="flex:1;"><div style="font-size:11px; color:var(--faint); font-weight:600;">Polazište</div><div style="font-size:15px; font-weight:700; margin-top:1px;">Lapad</div></div>
+            </div>
+            <div style="height:1px; background:var(--border); margin-left:35px;"></div>
+            <div style="display:flex; align-items:center; gap:12px; padding:13px 12px;">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="var(--danger)" style="flex:none;"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7z"/><circle cx="12" cy="9" r="2.4" fill="#fff"/></svg>
+              <div style="flex:1;"><div style="font-size:11px; color:var(--faint); font-weight:600;">Odredište</div><div style="font-size:15px; font-weight:700; margin-top:1px;">Sveučilište — Kampus</div></div>
+            </div>
+            <div style="height:1px; background:var(--border); margin-left:35px;"></div>
+            <div style="display:flex; align-items:center; gap:12px; padding:13px 12px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--faint)" stroke-width="2" style="flex:none;"><rect x="3" y="4.5" width="18" height="17" rx="3"/><path d="M3 9h18M8 2.5v4M16 2.5v4" stroke-linecap="round"/></svg>
+              <div style="flex:1;"><div style="font-size:11px; color:var(--faint); font-weight:600;">Datum polaska</div><div style="font-size:15px; font-weight:700; margin-top:1px;">Danas · Pon, 23. lip · 07:00</div></div>
+            </div>
+            <button style="position:absolute; top:42px; right:20px; width:38px; height:38px; border-radius:11px; background:var(--primary-soft); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--primary);">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4v13M8 4 5 7M8 4l3 3M16 20V7M16 20l3-3M16 20l-3-3"/></svg>
+            </button>
+          </div>
+
+          <button onClick="{{ doSearch }}" style="width:100%; margin-top:12px; display:flex; align-items:center; justify-content:center; gap:9px; background:var(--primary); color:var(--on-primary); border:none; border-radius:15px; padding:15px; font-family:inherit; font-size:15px; font-weight:800; cursor:pointer; box-shadow:0 8px 22px rgba(53,56,205,.28);" style-active="transform:scale(.985)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+            Traži vožnje
+          </button>
+
+          <!-- filters -->
+          <div style="display:flex; gap:8px; margin:20px -20px 4px; padding:0 20px; overflow-x:auto;">
+            <div style="flex:none; display:flex; align-items:center; gap:6px; padding:8px 13px; border-radius:999px; background:var(--primary-soft); color:var(--primary); border:1px solid transparent; font-size:13px; font-weight:700;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M3 6h18M7 12h10M11 18h2" stroke-linecap="round"/></svg>Filtri</div>
+            <div style="flex:none; display:flex; align-items:center; gap:6px; padding:8px 13px; border-radius:999px; background:var(--surface); color:var(--muted); border:1px solid var(--border); font-size:13px; font-weight:600;">Klima</div>
+            <div style="flex:none; display:flex; align-items:center; gap:6px; padding:8px 13px; border-radius:999px; background:var(--surface); color:var(--muted); border:1px solid var(--border); font-size:13px; font-weight:600;">Glazba</div>
+            <div style="flex:none; display:flex; align-items:center; gap:6px; padding:8px 13px; border-radius:999px; background:var(--surface); color:var(--muted); border:1px solid var(--border); font-size:13px; font-weight:600;">Bez pušenja</div>
+            <div style="flex:none; display:flex; align-items:center; gap:6px; padding:8px 13px; border-radius:999px; background:var(--surface); color:var(--muted); border:1px solid var(--border); font-size:13px; font-weight:600;">Prtljaga</div>
+          </div>
+
+          <div style="display:flex; align-items:baseline; justify-content:space-between; margin:18px 2px 12px;">
+            <div style="font-size:15px; font-weight:800;">{{ ridesCount }}</div>
+            <div style="font-size:13px; font-weight:600; color:var(--muted);">Sortiraj: Vrijeme</div>
+          </div>
+
+          <div style="display:flex; flex-direction:column; gap:12px;">
+            <sc-for list="{{ rides }}" as="r" hint-placeholder-count="4">
+            <button onClick="{{ r.onSelect }}" style="width:100%; text-align:left; background:var(--surface); border:1px solid var(--border); border-radius:18px; padding:14px; display:flex; flex-direction:column; gap:11px; cursor:pointer; box-shadow:var(--shadow); font-family:inherit; color:var(--text);" style-active="transform:scale(.99)">
+              <div style="display:flex; align-items:center; gap:12px;">
+                <div style="width:44px; height:44px; border-radius:50%; background:{{ r.avBg }}; color:{{ r.avFg }}; display:flex; align-items:center; justify-content:center; font-size:15px; font-weight:800; flex:none;">{{ r.initials }}</div>
+                <div style="flex:1; min-width:0;">
+                  <div style="font-size:15px; font-weight:700;">{{ r.driver }}</div>
+                  <div style="display:flex; align-items:center; gap:4px; margin-top:2px;">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="var(--star)"><path d="M12 2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 18l-6 3.4 1.4-6.8L2.3 9.9l6.9-.8z"/></svg>
+                    <span style="font-size:12.5px; font-weight:700; color:var(--muted);">{{ r.rating }}</span>
+                    <span style="font-size:12.5px; color:var(--faint);">· vozač</span>
+                  </div>
+                </div>
+                <div style="text-align:right; flex:none;">
+                  <div style="font-size:17px; font-weight:800;">{{ r.time }}</div>
+                  <div style="font-size:11px; color:var(--faint); font-weight:600;">polazak</div>
+                </div>
+              </div>
+              <div style="display:flex; align-items:center; gap:8px; padding:9px 11px; background:var(--surface-2); border-radius:11px;">
+                <span style="width:8px; height:8px; border-radius:50%; border:2.5px solid var(--primary); flex:none;"></span>
+                <span style="font-size:13px; font-weight:600;">{{ r.from }}</span>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--faint)" stroke-width="2" style="flex:none;"><path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <span style="font-size:13px; font-weight:600;">{{ r.to }}</span>
+              </div>
+              <div style="display:flex; align-items:center; justify-content:space-between;">
+                <div style="display:flex; gap:6px;">
+                  <span style="font-size:11.5px; font-weight:600; color:var(--muted); background:var(--surface-2); padding:4px 9px; border-radius:7px;">{{ r.tag1 }}</span>
+                  <sc-if value="{{ r.hasTag2 }}" hint-placeholder-val="{{ true }}"><span style="font-size:11.5px; font-weight:600; color:var(--muted); background:var(--surface-2); padding:4px 9px; border-radius:7px;">{{ r.tag2 }}</span></sc-if>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <span style="font-size:12px; color:var(--faint); font-weight:600;">{{ r.seats }}</span>
+                  <span style="font-size:16px; font-weight:800; color:var(--primary);">{{ r.price }}</span>
+                </div>
+              </div>
+            </button>
+            </sc-for>
+          </div>
+        </div>
+
+        <!-- bottom nav (search active) -->
+        <div style="flex:none; display:flex; align-items:flex-end; justify-content:space-around; padding:9px 12px 26px; background:var(--surface); border-top:1px solid var(--border); position:relative;">
+          <button onClick="{{ goSearch }}" style="background:none; border:none; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:3px; color:var(--primary); font-family:inherit; width:56px;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><span style="font-size:10.5px; font-weight:700;">Pretraga</span></button>
+          <button onClick="{{ goRes }}" style="background:none; border:none; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:3px; color:var(--faint); font-family:inherit; width:56px;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3.5" width="14" height="17" rx="2.5"/><path d="M9 8h6M9 12h6M9 16h3.5"/></svg><span style="font-size:10.5px; font-weight:600;">Rezervacije</span></button>
+          <button onClick="{{ goNew }}" style="background:none; border:none; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:5px; color:var(--faint); font-family:inherit; width:56px; margin-top:-14px;"><span style="width:50px; height:50px; border-radius:17px; background:var(--primary); display:flex; align-items:center; justify-content:center; box-shadow:0 8px 18px rgba(53,56,205,.35);"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--on-primary)" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span><span style="font-size:10.5px; font-weight:600;">Objavi</span></button>
+          <button onClick="{{ goNotif }}" style="background:none; border:none; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:3px; color:var(--faint); font-family:inherit; width:56px;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span style="font-size:10.5px; font-weight:600;">Obavijesti</span></button>
+          <button onClick="{{ goProfile }}" style="background:none; border:none; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:3px; color:var(--faint); font-family:inherit; width:56px;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span style="font-size:10.5px; font-weight:600;">Profil</span></button>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ DETALJ + RUTA ============ -->
+      <sc-if value="{{ isDetail }}">
+      <div style="height:100%; display:flex; flex-direction:column;">
+        <div style="flex:none; padding:56px 20px 12px; display:flex; align-items:center; gap:14px;">
+          <button onClick="{{ goSearch }}" style="width:40px; height:40px; border-radius:12px; background:var(--surface); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--text); box-shadow:var(--shadow);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
+          <div style="font-size:19px; font-weight:800;">Detalji vožnje</div>
+        </div>
+
+        <div style="flex:1; overflow:auto; padding:6px 20px 120px; animation:fadeUp .28s ease;">
+          <!-- map sketch -->
+          <div style="position:relative; border-radius:18px; overflow:hidden; border:1px solid var(--border); box-shadow:var(--shadow);">
+            <svg viewBox="0 0 360 196" width="100%" style="display:block; background:var(--map-bg);">
+              <path d="M0 150 Q70 138 130 158 T250 168 T360 150 L360 196 L0 196 Z" fill="var(--sea)"/>
+              <rect x="22" y="34" width="46" height="34" rx="6" fill="var(--block)"/>
+              <rect x="80" y="20" width="58" height="40" rx="6" fill="var(--block)"/>
+              <rect x="150" y="44" width="42" height="36" rx="6" fill="var(--block)"/>
+              <rect x="206" y="22" width="54" height="34" rx="6" fill="var(--block)"/>
+              <rect x="276" y="48" width="60" height="40" rx="6" fill="var(--block)"/>
+              <rect x="40" y="96" width="64" height="34" rx="6" fill="var(--block)"/>
+              <rect x="128" y="100" width="50" height="30" rx="6" fill="var(--block)"/>
+              <path d="M16 86h328M120 12v150M232 12v140" stroke="var(--road)" stroke-width="4" opacity=".7"/>
+              <path d="M58 120 C120 120 130 60 200 60 S300 48 322 44" fill="none" stroke="var(--primary)" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="0.1 13" opacity=".9"/>
+              <path d="M58 120 C120 120 130 60 200 60 S300 48 322 44" fill="none" stroke="var(--primary)" stroke-width="4.5" stroke-linecap="round" opacity=".28"/>
+              <circle cx="58" cy="120" r="7.5" fill="var(--surface)" stroke="var(--primary)" stroke-width="4"/>
+              <path d="M322 28a11 11 0 0 0-11 11c0 8 11 18 11 18s11-10 11-18a11 11 0 0 0-11-11z" fill="var(--danger)"/><circle cx="322" cy="39" r="4" fill="#fff"/>
+            </svg>
+            <div style="position:absolute; top:12px; left:12px; display:flex; gap:7px;">
+              <span style="font-family:'JetBrains Mono',monospace; font-size:11.5px; font-weight:600; background:var(--surface); color:var(--text); padding:5px 9px; border-radius:8px; box-shadow:var(--shadow);">5,2 km</span>
+              <span style="font-family:'JetBrains Mono',monospace; font-size:11.5px; font-weight:600; background:var(--surface); color:var(--text); padding:5px 9px; border-radius:8px; box-shadow:var(--shadow);">≈ 14 min</span>
+            </div>
+            <div style="position:absolute; bottom:10px; right:12px; font-size:10.5px; font-weight:600; color:var(--faint);">Skica optimalne rute</div>
+          </div>
+
+          <!-- route stops -->
+          <div style="background:var(--surface); border:1px solid var(--border); border-radius:18px; padding:16px; margin-top:14px; box-shadow:var(--shadow);">
+            <div style="display:flex; gap:13px;">
+              <div style="display:flex; flex-direction:column; align-items:center; padding-top:4px;">
+                <span style="width:12px; height:12px; border-radius:50%; border:3px solid var(--primary);"></span>
+                <span style="width:2px; flex:1; background:var(--border); margin:3px 0;"></span>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="var(--danger)"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7z"/><circle cx="12" cy="9" r="2.4" fill="#fff"/></svg>
+              </div>
+              <div style="flex:1; display:flex; flex-direction:column; gap:18px;">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start;"><div><div style="font-size:15px; font-weight:700;">{{ detFrom }}</div><div style="font-size:12.5px; color:var(--faint); margin-top:1px;">Polazište</div></div><div style="font-size:15px; font-weight:800;">{{ detTime }}</div></div>
+                <div style="display:flex; justify-content:space-between; align-items:flex-start;"><div><div style="font-size:15px; font-weight:700;">{{ detTo }}</div><div style="font-size:12.5px; color:var(--faint); margin-top:1px;">Odredište</div></div><div style="font-size:15px; font-weight:800;">{{ detArr }}</div></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- driver card -->
+          <div style="display:flex; align-items:center; gap:13px; background:var(--surface); border:1px solid var(--border); border-radius:18px; padding:14px 16px; margin-top:14px; box-shadow:var(--shadow);">
+            <div style="width:50px; height:50px; border-radius:50%; background:{{ detAvBg }}; color:{{ detAvFg }}; display:flex; align-items:center; justify-content:center; font-size:17px; font-weight:800;">{{ detInitials }}</div>
+            <div style="flex:1;">
+              <div style="font-size:16px; font-weight:800;">{{ detDriver }}</div>
+              <div style="display:flex; align-items:center; gap:5px; margin-top:2px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="var(--star)"><path d="M12 2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 18l-6 3.4 1.4-6.8L2.3 9.9l6.9-.8z"/></svg><span style="font-size:13px; font-weight:700; color:var(--muted);">{{ detRating }}</span><span style="font-size:13px; color:var(--faint);">· vozač</span></div>
+            </div>
+            <button style="width:42px; height:42px; border-radius:12px; background:var(--primary-soft); border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--primary);"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.7A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.3 1.8.6 2.6a2 2 0 0 1-.5 2.1L8 9.6a16 16 0 0 0 6 6l1.2-1.2a2 2 0 0 1 2.1-.5c.8.3 1.7.5 2.6.6a2 2 0 0 1 1.7 2z"/></svg></button>
+          </div>
+
+          <!-- preferences -->
+          <div style="display:flex; gap:8px; margin-top:14px;">
+            <div style="flex:1; display:flex; align-items:center; gap:8px; background:var(--surface); border:1px solid var(--border); border-radius:13px; padding:12px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round"><path d="M12 2v20M2 12h20M5 5l14 14M19 5 5 19"/></svg><span style="font-size:13px; font-weight:700;">Klima</span></div>
+            <div style="flex:1; display:flex; align-items:center; gap:8px; background:var(--surface); border:1px solid var(--border); border-radius:13px; padding:12px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg><span style="font-size:13px; font-weight:700;">Glazba</span></div>
+          </div>
+
+          <!-- seat selector -->
+          <div style="display:flex; align-items:center; justify-content:space-between; background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:14px 16px; margin-top:14px; box-shadow:var(--shadow);">
+            <div><div style="font-size:14px; font-weight:700;">Broj mjesta</div><div style="font-size:12px; color:var(--faint); margin-top:1px;">Slobodno: {{ detFree }}</div></div>
+            <div style="display:flex; align-items:center; gap:16px;">
+              <button onClick="{{ seatDec }}" style="width:34px; height:34px; border-radius:10px; background:var(--surface-2); border:1px solid var(--border); cursor:pointer; color:var(--text); font-size:20px; font-weight:700; display:flex; align-items:center; justify-content:center;">−</button>
+              <span style="font-size:18px; font-weight:800; min-width:16px; text-align:center;">{{ detSeats }}</span>
+              <button onClick="{{ seatInc }}" style="width:34px; height:34px; border-radius:10px; background:var(--primary); border:none; cursor:pointer; color:var(--on-primary); font-size:20px; font-weight:700; display:flex; align-items:center; justify-content:center;">+</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- sticky reserve bar -->
+        <div style="flex:none; padding:14px 20px 30px; background:var(--surface); border-top:1px solid var(--border); display:flex; align-items:center; gap:14px;">
+          <div><div style="font-size:11px; color:var(--faint); font-weight:600;">Ukupno · participacija</div><div style="font-size:22px; font-weight:800; color:var(--primary);">{{ detTotal }} €</div></div>
+          <button onClick="{{ reserve }}" style="flex:1; background:var(--primary); color:var(--on-primary); border:none; border-radius:15px; padding:16px; font-family:inherit; font-size:15px; font-weight:800; cursor:pointer; box-shadow:0 8px 22px rgba(53,56,205,.28);" style-active="transform:scale(.985)">Rezerviraj mjesto</button>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ NOVA VOŽNJA ============ -->
+      <sc-if value="{{ isNew }}">
+      <div style="height:100%; display:flex; flex-direction:column;">
+        <div style="flex:none; padding:56px 20px 10px;">
+          <div style="display:flex; align-items:center; gap:14px;">
+            <button onClick="{{ goSearch }}" style="width:40px; height:40px; border-radius:12px; background:var(--surface); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--text); box-shadow:var(--shadow);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
+            <div style="font-size:19px; font-weight:800;">Nova vožnja</div>
+          </div>
+          <!-- stepper -->
+          <div style="display:flex; gap:6px; margin-top:16px;">
+            <div style="flex:1; height:5px; border-radius:3px; background:var(--primary);"></div>
+            <div style="flex:1; height:5px; border-radius:3px; background:{{ s2bar }};"></div>
+            <div style="flex:1; height:5px; border-radius:3px; background:{{ s3bar }};"></div>
+            <div style="flex:1; height:5px; border-radius:3px; background:{{ s4bar }};"></div>
+          </div>
+          <div style="display:flex; justify-content:space-between; margin-top:8px; font-size:11px; font-weight:700; color:var(--faint);">
+            <span style="color:{{ s1col }};">Ruta</span><span style="color:{{ s2col }};">Vrijeme</span><span style="color:{{ s3col }};">Mjesta</span><span style="color:{{ s4col }};">Detalji</span>
+          </div>
+        </div>
+
+        <div style="flex:1; overflow:auto; padding:14px 20px 110px;">
+          <!-- STEP 1 -->
+          <sc-if value="{{ isStep1 }}">
+          <div style="animation:fadeUp .25s ease;">
+            <div style="font-size:18px; font-weight:800; margin-bottom:4px;">Definiraj rutu</div>
+            <div style="font-size:13px; color:var(--muted); margin-bottom:16px;">Odaberi polazište i odredište (bilo koja → bilo koja).</div>
+
+            <div style="font-size:11px; color:var(--faint); font-weight:700; letter-spacing:.4px; text-transform:uppercase; margin:0 2px 8px;">Polazište</div>
+            <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:18px;">
+              <sc-for list="{{ originChips }}" as="c" hint-placeholder-count="6">
+              <button onClick="{{ c.onSelect }}" style="background:{{ c.bg }}; color:{{ c.color }}; border:{{ c.border }}; border-radius:999px; padding:8px 13px; font-family:inherit; font-size:13px; font-weight:700; cursor:pointer;">{{ c.name }}</button>
+              </sc-for>
+            </div>
+
+            <div style="font-size:11px; color:var(--faint); font-weight:700; letter-spacing:.4px; text-transform:uppercase; margin:0 2px 8px;">Odredište</div>
+            <div style="display:flex; flex-wrap:wrap; gap:8px;">
+              <sc-for list="{{ destChips }}" as="c" hint-placeholder-count="6">
+              <button onClick="{{ c.onSelect }}" style="background:{{ c.bg }}; color:{{ c.color }}; border:{{ c.border }}; border-radius:999px; padding:8px 13px; font-family:inherit; font-size:13px; font-weight:700; cursor:pointer;">{{ c.name }}</button>
+              </sc-for>
+            </div>
+
+            <div style="display:flex; align-items:center; gap:8px; padding:11px 13px; background:var(--primary-soft); border-radius:12px; margin-top:16px;">
+              <span style="width:8px; height:8px; border-radius:50%; border:2.5px solid var(--primary); flex:none;"></span>
+              <span style="font-size:13.5px; font-weight:800; color:var(--primary);">{{ newRoute }}</span>
+            </div>
+            <div style="position:relative; border-radius:16px; overflow:hidden; border:1px solid var(--border); margin-top:14px; box-shadow:var(--shadow);">
+              <svg viewBox="0 0 360 188" width="100%" style="display:block; background:var(--map-bg);">
+                <path d="M0 146 Q80 134 140 154 T260 162 L360 150 L360 188 L0 188 Z" fill="var(--sea)"/>
+                <rect x="28" y="30" width="50" height="36" rx="6" fill="var(--block)"/><rect x="92" y="22" width="56" height="42" rx="6" fill="var(--block)"/><rect x="166" y="40" width="46" height="34" rx="6" fill="var(--block)"/><rect x="228" y="26" width="58" height="38" rx="6" fill="var(--block)"/><rect x="50" y="92" width="60" height="32" rx="6" fill="var(--block)"/><rect x="138" y="96" width="48" height="30" rx="6" fill="var(--block)"/>
+                <path d="M18 82h328M134 12v150M246 12v140" stroke="var(--road)" stroke-width="4" opacity=".7"/>
+                <path d="M44 118 C110 118 120 56 196 58 S300 50 326 46" fill="none" stroke="var(--primary)" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="0.1 13"/>
+                <path d="M44 118 C110 118 120 56 196 58 S300 50 326 46" fill="none" stroke="var(--primary)" stroke-width="4.5" stroke-linecap="round" opacity=".28"/>
+                <circle cx="44" cy="118" r="7.5" fill="var(--surface)" stroke="var(--primary)" stroke-width="4"/>
+                <path d="M326 30a11 11 0 0 0-11 11c0 8 11 18 11 18s11-10 11-18a11 11 0 0 0-11-11z" fill="var(--danger)"/><circle cx="326" cy="41" r="4" fill="#fff"/>
+              </svg>
+              <div style="position:absolute; top:12px; left:12px; display:flex; gap:7px;"><span style="font-family:'JetBrains Mono',monospace; font-size:11.5px; font-weight:600; background:var(--surface); padding:5px 9px; border-radius:8px; box-shadow:var(--shadow);">8,1 km</span><span style="font-family:'JetBrains Mono',monospace; font-size:11.5px; font-weight:600; background:var(--surface); padding:5px 9px; border-radius:8px; box-shadow:var(--shadow);">≈ 19 min</span></div>
+            </div>
+          </div>
+          </sc-if>
+
+          <!-- STEP 2 -->
+          <sc-if value="{{ isStep2 }}">
+          <div style="animation:fadeUp .25s ease;">
+            <div style="font-size:18px; font-weight:800; margin-bottom:4px;">Vrijeme polaska</div>
+            <div style="font-size:13px; color:var(--muted); margin-bottom:16px;">Kada krećeš na put?</div>
+            <div style="display:flex; gap:12px;">
+              <div style="flex:1; background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:14px; box-shadow:var(--shadow);"><div style="font-size:11px; color:var(--faint); font-weight:600; margin-bottom:6px;">Datum</div><div style="display:flex; align-items:center; gap:8px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><rect x="3" y="4.5" width="18" height="17" rx="3"/><path d="M3 9h18M8 2.5v4M16 2.5v4" stroke-linecap="round"/></svg><span style="font-size:15px; font-weight:700;">Pon, 23. lip</span></div></div>
+              <div style="flex:1; background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:14px; box-shadow:var(--shadow);"><div style="font-size:11px; color:var(--faint); font-weight:600; margin-bottom:6px;">Vrijeme</div><div style="display:flex; align-items:center; gap:8px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2" stroke-linecap="round" stroke-linejoin="round"/></svg><span style="font-size:15px; font-weight:700;">07:25</span></div></div>
+            </div>
+            <div style="font-size:13px; font-weight:700; color:var(--muted); margin:20px 2px 10px;">Ponavljanje</div>
+            <div style="display:flex; gap:9px;">
+              <div style="flex:1; text-align:center; padding:12px; border-radius:12px; background:var(--primary); color:var(--on-primary); font-size:13.5px; font-weight:700;">Jednokratno</div>
+              <div style="flex:1; text-align:center; padding:12px; border-radius:12px; background:var(--surface); border:1px solid var(--border); color:var(--muted); font-size:13.5px; font-weight:700;">Radnim danima</div>
+            </div>
+          </div>
+          </sc-if>
+
+          <!-- STEP 3 -->
+          <sc-if value="{{ isStep3 }}">
+          <div style="animation:fadeUp .25s ease;">
+            <div style="font-size:18px; font-weight:800; margin-bottom:4px;">Mjesta i cijena</div>
+            <div style="font-size:13px; color:var(--muted); margin-bottom:16px;">Koliko putnika primaš i kolika je participacija?</div>
+            <div style="display:flex; align-items:center; justify-content:space-between; background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:16px; box-shadow:var(--shadow);">
+              <div style="display:flex; align-items:center; gap:11px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3 20a6 6 0 0 1 12 0M16 6.5a3 3 0 0 1 0 5.5M21 20a5.5 5.5 0 0 0-4-5.3"/></svg><span style="font-size:15px; font-weight:700;">Raspoloživa mjesta</span></div>
+              <div style="display:flex; align-items:center; gap:14px;"><button onClick="{{ nseatDec }}" style="width:34px; height:34px; border-radius:10px; background:var(--surface-2); border:1px solid var(--border); cursor:pointer; color:var(--text); font-size:20px; font-weight:700;">−</button><span style="font-size:18px; font-weight:800; min-width:14px; text-align:center;">{{ newSeats }}</span><button onClick="{{ nseatInc }}" style="width:34px; height:34px; border-radius:10px; background:var(--primary); border:none; cursor:pointer; color:var(--on-primary); font-size:20px; font-weight:700;">+</button></div>
+            </div>
+            <div style="display:flex; align-items:center; justify-content:space-between; background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:16px; margin-top:12px; box-shadow:var(--shadow);">
+              <div style="display:flex; align-items:center; gap:11px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M15 9.5a3 3 0 0 0-3-1.5c-1.7 0-3 1-3 2.2 0 2.8 6 1.5 6 4.3 0 1.3-1.3 2.2-3 2.2a3 3 0 0 1-3-1.5M12 6.5v11"/></svg><span style="font-size:15px; font-weight:700;">Cijena po mjestu</span></div>
+              <div style="display:flex; align-items:center; gap:14px;"><button onClick="{{ npriceDec }}" style="width:34px; height:34px; border-radius:10px; background:var(--surface-2); border:1px solid var(--border); cursor:pointer; color:var(--text); font-size:20px; font-weight:700;">−</button><span style="font-size:17px; font-weight:800; min-width:54px; text-align:center; color:var(--primary);">{{ newPrice }} €</span><button onClick="{{ npriceInc }}" style="width:34px; height:34px; border-radius:10px; background:var(--primary); border:none; cursor:pointer; color:var(--on-primary); font-size:20px; font-weight:700;">+</button></div>
+            </div>
+            <div style="display:flex; gap:9px; align-items:flex-start; background:var(--primary-soft); border-radius:13px; padding:13px 14px; margin-top:14px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" style="flex:none; margin-top:1px;"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v0" stroke-linecap="round"/></svg><span style="font-size:12.5px; color:var(--primary); font-weight:600; line-height:1.45;">Participacija pokriva trošak goriva — nije naplata vožnje.</span></div>
+          </div>
+          </sc-if>
+
+          <!-- STEP 4 -->
+          <sc-if value="{{ isStep4 }}">
+          <div style="animation:fadeUp .25s ease;">
+            <div style="font-size:18px; font-weight:800; margin-bottom:4px;">Preferencije</div>
+            <div style="font-size:13px; color:var(--muted); margin-bottom:16px;">Označi uvjete vožnje za putnike.</div>
+            <div style="display:flex; flex-wrap:wrap; gap:9px;">
+              <div style="display:flex; align-items:center; gap:7px; padding:10px 14px; border-radius:12px; background:var(--primary); color:var(--on-primary); font-size:13.5px; font-weight:700;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg>Klima</div>
+              <div style="display:flex; align-items:center; gap:7px; padding:10px 14px; border-radius:12px; background:var(--primary); color:var(--on-primary); font-size:13.5px; font-weight:700;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg>Glazba</div>
+              <div style="padding:10px 14px; border-radius:12px; background:var(--surface); border:1px solid var(--border); color:var(--muted); font-size:13.5px; font-weight:700;">Bez pušenja</div>
+              <div style="padding:10px 14px; border-radius:12px; background:var(--surface); border:1px solid var(--border); color:var(--muted); font-size:13.5px; font-weight:700;">Tiha vožnja</div>
+              <div style="padding:10px 14px; border-radius:12px; background:var(--surface); border:1px solid var(--border); color:var(--muted); font-size:13.5px; font-weight:700;">Prtljaga</div>
+              <div style="padding:10px 14px; border-radius:12px; background:var(--surface); border:1px solid var(--border); color:var(--muted); font-size:13.5px; font-weight:700;">Kućni ljubimci</div>
+            </div>
+            <div style="background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:16px; margin-top:18px; box-shadow:var(--shadow);">
+              <div style="font-size:13px; font-weight:800; margin-bottom:12px;">Sažetak vožnje</div>
+              <div style="display:flex; justify-content:space-between; padding:6px 0; font-size:13.5px;"><span style="color:var(--muted);">Ruta</span><span style="font-weight:700;">{{ newRoute }}</span></div>
+              <div style="display:flex; justify-content:space-between; padding:6px 0; font-size:13.5px;"><span style="color:var(--muted);">Polazak</span><span style="font-weight:700;">Pon, 23. lip · 07:25</span></div>
+              <div style="display:flex; justify-content:space-between; padding:6px 0; font-size:13.5px;"><span style="color:var(--muted);">Mjesta</span><span style="font-weight:700;">{{ newSeats }}</span></div>
+              <div style="display:flex; justify-content:space-between; padding:6px 0; font-size:13.5px;"><span style="color:var(--muted);">Cijena</span><span style="font-weight:700; color:var(--primary);">{{ newPrice }} € / mjesto</span></div>
+            </div>
+          </div>
+          </sc-if>
+        </div>
+
+        <!-- step nav -->
+        <div style="flex:none; padding:12px 20px 30px; background:var(--surface); border-top:1px solid var(--border); display:flex; gap:12px;">
+          <button onClick="{{ stepBack }}" style="flex:none; padding:16px 22px; border-radius:15px; background:var(--surface-2); border:1px solid var(--border); color:var(--text); font-family:inherit; font-size:15px; font-weight:700; cursor:pointer;">Natrag</button>
+          <sc-if value="{{ isStep4 }}"><button onClick="{{ publishRide }}" style="flex:1; background:var(--success); color:#fff; border:none; border-radius:15px; padding:16px; font-family:inherit; font-size:15px; font-weight:800; cursor:pointer;" style-active="transform:scale(.985)">Objavi vožnju</button></sc-if>
+          <sc-if value="{{ notStep4 }}" hint-placeholder-val="{{ true }}"><button onClick="{{ stepNext }}" style="flex:1; background:var(--primary); color:var(--on-primary); border:none; border-radius:15px; padding:16px; font-family:inherit; font-size:15px; font-weight:800; cursor:pointer;" style-active="transform:scale(.985)">Dalje</button></sc-if>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ REZERVACIJE ============ -->
+      <sc-if value="{{ isRes }}">
+      <div style="height:100%; display:flex; flex-direction:column;">
+        <div style="flex:none; padding:56px 20px 12px;"><div style="font-size:25px; font-weight:800; letter-spacing:-.6px;">Moje rezervacije</div></div>
+        <div style="flex:1; overflow:auto; padding:4px 20px 96px; animation:fadeUp .28s ease;">
+          <div style="display:flex; gap:8px; margin-bottom:18px;"><div style="flex:1; text-align:center; padding:9px; border-radius:11px; background:var(--primary); color:var(--on-primary); font-size:13.5px; font-weight:700;">Kao putnik</div><div style="flex:1; text-align:center; padding:9px; border-radius:11px; background:var(--surface); border:1px solid var(--border); color:var(--muted); font-size:13.5px; font-weight:700;">Kao vozač</div></div>
+
+          <div style="display:flex; flex-direction:column; gap:12px;">
+            <!-- žive rezervacije iz baze (FZ-10) -->
+            <sc-for list="{{ myBookings }}" as="b" hint-placeholder-count="3">
+            <div style="background:var(--surface); border:1px solid var(--border); border-radius:18px; padding:15px; box-shadow:var(--shadow);">
+              <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:11px;"><div style="display:flex; align-items:center; gap:11px;"><div style="width:40px; height:40px; border-radius:50%; background:var(--primary-soft); color:var(--primary); display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:800;">{{ b.initials }}</div><div><div style="font-size:14.5px; font-weight:700;">{{ b.driver }}</div><div style="font-size:12px; color:var(--faint);">{{ b.when }}</div></div></div><span style="display:inline-flex; align-items:center; gap:5px; background:{{ b.statusBg }}; color:{{ b.statusColor }}; font-size:11.5px; font-weight:800; padding:5px 10px; border-radius:8px;">{{ b.statusLabel }}</span></div>
+              <div style="display:flex; align-items:center; gap:8px; padding:9px 11px; background:var(--surface-2); border-radius:11px;"><span style="width:7px; height:7px; border-radius:50%; border:2.5px solid var(--primary);"></span><span style="font-size:13px; font-weight:600;">{{ b.from }}</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--faint)" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg><span style="font-size:13px; font-weight:600;">{{ b.to }}</span><span style="margin-left:auto; font-size:13px; font-weight:800; color:var(--primary);">{{ b.price }}</span></div>
+              <sc-if value="{{ b.canCancel }}"><button onClick="{{ b.onCancel }}" style="width:100%; margin-top:10px; padding:9px; border-radius:11px; background:var(--danger-soft); color:var(--danger); border:none; font-family:inherit; font-size:13px; font-weight:700; cursor:pointer;">Otkaži rezervaciju</button></sc-if>
+            </div>
+            </sc-for>
+
+            <div style="font-size:13px; font-weight:800; color:var(--muted); margin:12px 2px 2px;">Vožnja koju nudiš</div>
+            <div style="background:var(--surface); border:1px solid var(--primary); border-radius:18px; padding:15px; box-shadow:var(--shadow);">
+              <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:11px;"><div><div style="font-size:14.5px; font-weight:800;">Kampus → Lapad</div><div style="font-size:12px; color:var(--faint); margin-top:1px;">Danas · 15:30</div></div><span style="display:inline-flex; align-items:center; gap:5px; background:var(--primary-soft); color:var(--primary); font-size:11.5px; font-weight:800; padding:5px 10px; border-radius:8px;">Aktivno</span></div>
+              <div style="display:flex; align-items:center; justify-content:space-between;"><div style="display:flex; align-items:center;"><div style="width:30px; height:30px; border-radius:50%; background:#DDEFE6; color:#1A8F5C; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:800; border:2px solid var(--surface);">IP</div><div style="width:30px; height:30px; border-radius:50%; background:#FBE6EC; color:#C0395B; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:800; border:2px solid var(--surface); margin-left:-9px;">LŠ</div><span style="font-size:12.5px; color:var(--muted); font-weight:600; margin-left:8px;">2 / 3 mjesta popunjeno</span></div><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--faint)" stroke-width="2"><path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            </div>
+          </div>
+        </div>
+
+        <div style="flex:none; display:flex; align-items:flex-end; justify-content:space-around; padding:9px 12px 26px; background:var(--surface); border-top:1px solid var(--border);">
+          <button onClick="{{ goSearch }}" style="background:none; border:none; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:3px; color:var(--faint); font-family:inherit; width:56px;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><span style="font-size:10.5px; font-weight:600;">Pretraga</span></button>
+          <button onClick="{{ goRes }}" style="background:none; border:none; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:3px; color:var(--primary); font-family:inherit; width:56px;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3.5" width="14" height="17" rx="2.5"/><path d="M9 8h6M9 12h6M9 16h3.5"/></svg><span style="font-size:10.5px; font-weight:700;">Rezervacije</span></button>
+          <button onClick="{{ goNew }}" style="background:none; border:none; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:5px; color:var(--faint); font-family:inherit; width:56px; margin-top:-14px;"><span style="width:50px; height:50px; border-radius:17px; background:var(--primary); display:flex; align-items:center; justify-content:center; box-shadow:0 8px 18px rgba(53,56,205,.35);"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--on-primary)" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span><span style="font-size:10.5px; font-weight:600;">Objavi</span></button>
+          <button onClick="{{ goNotif }}" style="background:none; border:none; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:3px; color:var(--faint); font-family:inherit; width:56px;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span style="font-size:10.5px; font-weight:600;">Obavijesti</span></button>
+          <button onClick="{{ goProfile }}" style="background:none; border:none; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:3px; color:var(--faint); font-family:inherit; width:56px;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span style="font-size:10.5px; font-weight:600;">Profil</span></button>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ NOTIFIKACIJE ============ -->
+      <sc-if value="{{ isNotif }}">
+      <div style="height:100%; display:flex; flex-direction:column;">
+        <div style="flex:none; padding:56px 20px 12px; display:flex; align-items:baseline; justify-content:space-between;"><div style="font-size:25px; font-weight:800; letter-spacing:-.6px;">Obavijesti</div><span onClick="{{ markAllRead }}" style="font-size:12.5px; font-weight:700; color:var(--primary); cursor:pointer;">Označi pročitano</span></div>
+        <div style="flex:1; overflow:auto; padding:4px 20px 96px; animation:fadeUp .28s ease;">
+          <div style="display:flex; flex-direction:column; gap:10px;">
+            <!-- žive obavijesti iz baze (FZ-12) -->
+            <sc-for list="{{ notifs }}" as="n" hint-placeholder-count="4">
+            <div style="display:flex; gap:13px; background:{{ n.cardBg }}; border:1px solid var(--border); border-radius:15px; padding:14px;"><span style="width:38px; height:38px; border-radius:11px; background:var(--surface-2); color:var(--primary); display:flex; align-items:center; justify-content:center; flex:none;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg></span><div style="flex:1;"><div style="font-size:13.5px; font-weight:700; line-height:1.4;">{{ n.message }}</div><div style="font-size:11.5px; color:var(--faint); margin-top:3px;">{{ n.ago }}</div></div></div>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="flex:none; display:flex; align-items:flex-end; justify-content:space-around; padding:9px 12px 26px; background:var(--surface); border-top:1px solid var(--border);">
+          <button onClick="{{ goSearch }}" style="background:none; border:none; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:3px; color:var(--faint); font-family:inherit; width:56px;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><span style="font-size:10.5px; font-weight:600;">Pretraga</span></button>
+          <button onClick="{{ goRes }}" style="background:none; border:none; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:3px; color:var(--faint); font-family:inherit; width:56px;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3.5" width="14" height="17" rx="2.5"/><path d="M9 8h6M9 12h6M9 16h3.5"/></svg><span style="font-size:10.5px; font-weight:600;">Rezervacije</span></button>
+          <button onClick="{{ goNew }}" style="background:none; border:none; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:5px; color:var(--faint); font-family:inherit; width:56px; margin-top:-14px;"><span style="width:50px; height:50px; border-radius:17px; background:var(--primary); display:flex; align-items:center; justify-content:center; box-shadow:0 8px 18px rgba(53,56,205,.35);"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--on-primary)" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span><span style="font-size:10.5px; font-weight:600;">Objavi</span></button>
+          <button onClick="{{ goNotif }}" style="background:none; border:none; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:3px; color:var(--primary); font-family:inherit; width:56px;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span style="font-size:10.5px; font-weight:700;">Obavijesti</span></button>
+          <button onClick="{{ goProfile }}" style="background:none; border:none; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:3px; color:var(--faint); font-family:inherit; width:56px;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span style="font-size:10.5px; font-weight:600;">Profil</span></button>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ PROFIL ============ -->
+      <sc-if value="{{ isProfile }}">
+      <div style="height:100%; display:flex; flex-direction:column;">
+        <div style="flex:none; padding:56px 20px 12px;"><div style="font-size:25px; font-weight:800; letter-spacing:-.6px;">Profil</div></div>
+        <div style="flex:1; overflow:auto; padding:4px 20px 96px; animation:fadeUp .28s ease;">
+          <div style="display:flex; align-items:center; gap:15px; background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:18px; box-shadow:var(--shadow);">
+            <div style="width:62px; height:62px; border-radius:50%; background:linear-gradient(145deg,#3A3DD4,#2A2D9E); color:#fff; display:flex; align-items:center; justify-content:center; font-size:21px; font-weight:800;">{{ profInitials }}</div>
+            <div style="flex:1;">
+              <div style="font-size:18px; font-weight:800;">{{ profName }}</div>
+              <div style="font-size:12.5px; color:var(--muted); margin-top:1px;">Student · Sveučilište u Dubrovniku</div>
+              <div style="display:flex; align-items:center; gap:5px; margin-top:6px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="var(--star)"><path d="M12 2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 18l-6 3.4 1.4-6.8L2.3 9.9l6.9-.8z"/></svg><span style="font-size:13px; font-weight:800;">{{ profRating }}</span><span style="font-size:12.5px; color:var(--faint);">· prosječna ocjena</span></div>
+            </div>
+          </div>
+
+          <div style="display:flex; gap:8px; background:var(--surface-2); border-radius:13px; padding:5px; margin-top:14px;"><div style="flex:1; text-align:center; padding:10px; border-radius:9px; background:var(--surface); color:var(--text); font-size:13.5px; font-weight:800; box-shadow:var(--shadow);">Putnik</div><div style="flex:1; text-align:center; padding:10px; border-radius:9px; color:var(--muted); font-size:13.5px; font-weight:700;">Vozač</div></div>
+
+          <div style="display:flex; gap:10px; margin-top:14px;">
+            <div style="flex:1; background:var(--surface); border:1px solid var(--border); border-radius:15px; padding:14px; text-align:center; box-shadow:var(--shadow);"><div style="font-size:22px; font-weight:800; color:var(--primary);">47</div><div style="font-size:11.5px; color:var(--muted); font-weight:600; margin-top:2px;">vožnji</div></div>
+            <div style="flex:1; background:var(--surface); border:1px solid var(--border); border-radius:15px; padding:14px; text-align:center; box-shadow:var(--shadow);"><div style="font-size:22px; font-weight:800; color:var(--primary);">128 €</div><div style="font-size:11.5px; color:var(--muted); font-weight:600; margin-top:2px;">ušteđeno</div></div>
+            <div style="flex:1; background:var(--surface); border:1px solid var(--border); border-radius:15px; padding:14px; text-align:center; box-shadow:var(--shadow);"><div style="font-size:22px; font-weight:800; color:var(--primary);">86</div><div style="font-size:11.5px; color:var(--muted); font-weight:600; margin-top:2px;">kg CO₂</div></div>
+          </div>
+
+          <div style="font-size:12px; font-weight:700; color:var(--faint); letter-spacing:.4px; text-transform:uppercase; margin:20px 2px 9px;">Preferencije</div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;"><span style="font-size:12.5px; font-weight:700; color:var(--primary); background:var(--primary-soft); padding:8px 13px; border-radius:10px;">Klima</span><span style="font-size:12.5px; font-weight:700; color:var(--primary); background:var(--primary-soft); padding:8px 13px; border-radius:10px;">Glazba</span><span style="font-size:12.5px; font-weight:700; color:var(--primary); background:var(--primary-soft); padding:8px 13px; border-radius:10px;">Bez pušenja</span></div>
+
+          <div style="background:var(--surface); border:1px solid var(--border); border-radius:18px; margin-top:20px; overflow:hidden; box-shadow:var(--shadow);">
+            <div style="display:flex; align-items:center; gap:13px; padding:15px 16px; border-bottom:1px solid var(--border);"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l3-3 3 3 5-6"/></svg><span style="flex:1; font-size:14.5px; font-weight:600;">Povijest vožnji</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--faint)" stroke-width="2"><path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div style="display:flex; align-items:center; gap:13px; padding:15px 16px; border-bottom:1px solid var(--border);"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.9"><path d="M12 2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 18l-6 3.4 1.4-6.8L2.3 9.9l6.9-.8z" stroke-linejoin="round"/></svg><span style="flex:1; font-size:14.5px; font-weight:600;">Moje ocjene</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--faint)" stroke-width="2"><path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div style="display:flex; align-items:center; gap:13px; padding:15px 16px;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg><span style="flex:1; font-size:14.5px; font-weight:600;">Tamni način rada</span>
+              <button onClick="{{ toggleDark }}" style="width:48px; height:28px; border-radius:999px; border:none; cursor:pointer; background:{{ darkSwitchBg }}; position:relative; transition:background .2s;"><span style="position:absolute; top:3px; left:{{ darkKnobX }}; width:22px; height:22px; border-radius:50%; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.3); transition:left .2s;"></span></button>
+            </div>
+          </div>
+
+          <button onClick="{{ logout }}" style="width:100%; margin-top:14px; display:flex; align-items:center; justify-content:center; gap:9px; background:var(--danger-soft); color:var(--danger); border:none; border-radius:15px; padding:15px; font-family:inherit; font-size:14.5px; font-weight:800; cursor:pointer;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>Odjava</button>
+        </div>
+
+        <div style="flex:none; display:flex; align-items:flex-end; justify-content:space-around; padding:9px 12px 26px; background:var(--surface); border-top:1px solid var(--border);">
+          <button onClick="{{ goSearch }}" style="background:none; border:none; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:3px; color:var(--faint); font-family:inherit; width:56px;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><span style="font-size:10.5px; font-weight:600;">Pretraga</span></button>
+          <button onClick="{{ goRes }}" style="background:none; border:none; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:3px; color:var(--faint); font-family:inherit; width:56px;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3.5" width="14" height="17" rx="2.5"/><path d="M9 8h6M9 12h6M9 16h3.5"/></svg><span style="font-size:10.5px; font-weight:600;">Rezervacije</span></button>
+          <button onClick="{{ goNew }}" style="background:none; border:none; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:5px; color:var(--faint); font-family:inherit; width:56px; margin-top:-14px;"><span style="width:50px; height:50px; border-radius:17px; background:var(--primary); display:flex; align-items:center; justify-content:center; box-shadow:0 8px 18px rgba(53,56,205,.35);"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--on-primary)" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span><span style="font-size:10.5px; font-weight:600;">Objavi</span></button>
+          <button onClick="{{ goNotif }}" style="background:none; border:none; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:3px; color:var(--faint); font-family:inherit; width:56px;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span style="font-size:10.5px; font-weight:600;">Obavijesti</span></button>
+          <button onClick="{{ goProfile }}" style="background:none; border:none; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:3px; color:var(--primary); font-family:inherit; width:56px;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span style="font-size:10.5px; font-weight:700;">Profil</span></button>
+        </div>
+      </div>
+      </sc-if>
+
+    </div>
+  <!-- /fullscreen -->
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:480,&quot;height&quot;:1120},&quot;startScreen&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;login&quot;,&quot;search&quot;,&quot;detail&quot;,&quot;new&quot;,&quot;reservations&quot;,&quot;profile&quot;,&quot;notifications&quot;],&quot;default&quot;:&quot;login&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;darkMode&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;showToolbar&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;}}">
+// ── API konfiguracija ─────────────────────────────────────────────
+// Adresa backenda (može se nadjačati postavljanjem window.UNIDRIVE_API).
+const API_BASE = (typeof window !== 'undefined' && window.UNIDRIVE_API) || 'http://localhost:4000/api';
+const TOKEN_KEY = 'unidrive_token';
+
+// Paleta boja avatara + prijevod preferencija (za prikaz)
+const AV_PALETTE = [
+  { bg:'#E7E9FB', fg:'#3F43C4' }, { bg:'#DDEFE6', fg:'#1A8F5C' },
+  { bg:'#FBE6EC', fg:'#C0395B' }, { bg:'#FAEFD9', fg:'#B07A14' },
+  { bg:'#E6EEF7', fg:'#2D6CA8' },
+];
+const PREF_LABELS = { klima:'Klima', glazba:'Glazba', bez_pusenja:'Bez pušenja', tiha_voznja:'Tiha vožnja', prtljaga:'Prtljaga' };
+
+// Lokacije za polazište i odredište (obostrano – bilo koja → bilo koja).
+// Dubrovački kvartovi + fakulteti / studentski dom.
+const LOCATIONS = [
+  'Lapad', 'Babin Kuk', 'Gruž', 'Ploče', 'Pile', 'Mokošica', 'Montovjerna', 'Sustjepan',
+  'Kampus', 'Ekonomski fakultet', 'Pomorski fakultet', 'Studentski dom',
+];
+const STATUS_STYLE = {
+  confirmed: { label:'Potvrđeno',  bg:'var(--success-soft)', color:'var(--success)' },
+  pending:   { label:'Na čekanju', bg:'var(--warning-soft)', color:'var(--warning)' },
+  cancelled: { label:'Otkazano',   bg:'var(--danger-soft)',  color:'var(--danger)'  },
+};
+
+const initialsOf = (f, l) => ((f || '?').charAt(0) + (l || '').charAt(0)).toUpperCase();
+const fmtEur = (n) => Number(n).toFixed(2).replace('.', ',');
+const pad2 = (n) => String(n).padStart(2, '0');
+const toDate = (dt) => new Date(String(dt).replace(' ', 'T'));
+const fmtTime = (dt) => { const d = toDate(dt); return isNaN(d) ? '' : pad2(d.getHours()) + ':' + pad2(d.getMinutes()); };
+const fmtDateTime = (dt) => { const d = toDate(dt); if (isNaN(d)) return ''; const days=['Ned','Pon','Uto','Sri','Čet','Pet','Sub']; const mon=['sij','velj','ožu','tra','svi','lip','srp','kol','ruj','lis','stu','pro']; return days[d.getDay()]+', '+d.getDate()+'. '+mon[d.getMonth()]+' · '+fmtTime(dt); };
+const timeAgo = (dt) => { const d=toDate(dt); if(isNaN(d)) return ''; const m=Math.floor((Date.now()-d.getTime())/60000); if(m<1)return'upravo sad'; if(m<60)return'prije '+m+' min'; const h=Math.floor(m/60); if(h<24)return'prije '+h+' h'; const dd=Math.floor(h/24); return dd===1?'jučer':'prije '+dd+' dana'; };
+
+// Demo vožnje (fallback ako backend nije pokrenut – dizajn ostaje vidljiv)
+const MOCK_RIDES = [
+  { driver:'Marta Kovač', initials:'MK', avBg:'#E7E9FB', avFg:'#3F43C4', rating:'4,9', from:'Lapad', to:'Kampus', time:'07:40', seats:'3 mjesta', seatsNum:3, price:'2,50 €', priceNum:2.5, tag1:'Klima', tag2:'Glazba', hasTag2:true, onSelect:()=>{} },
+  { driver:'Ivan Perić', initials:'IP', avBg:'#DDEFE6', avFg:'#1A8F5C', rating:'4,8', from:'Mokošica', to:'Kampus', time:'07:25', seats:'2 mjesta', seatsNum:2, price:'2,00 €', priceNum:2.0, tag1:'Bez pušenja', tag2:'', hasTag2:false, onSelect:()=>{} },
+  { driver:'Lucija Šarić', initials:'LŠ', avBg:'#FBE6EC', avFg:'#C0395B', rating:'5,0', from:'Babin Kuk', to:'Kampus', time:'08:10', seats:'1 mjesto', seatsNum:1, price:'3,00 €', priceNum:3.0, tag1:'Klima', tag2:'Tiha vožnja', hasTag2:true, onSelect:()=>{} },
+];
+
+class Component extends DCLogic {
+  state = {
+    screen: this.props.startScreen || 'login',
+    dark: !!this.props.darkMode,
+    step: 1, seats: 1, nseats: 2, nprice: 250,
+    newOrigin: 'Lapad', newDestination: 'Kampus',
+    // ── stanje spojeno na API ──
+    me: null,
+    apiRides: null,        // null = još nije dohvaćeno (koristi se MOCK_RIDES)
+    selectedRide: null,
+    myBookings: [],
+    notifs: [],
+    busy: false,
+  };
+
+  componentDidMount() {
+    // Ako postoji spremljeni token, učitaj korisnika i podatke odmah.
+    const token = (typeof localStorage !== 'undefined') ? localStorage.getItem(TOKEN_KEY) : null;
+    if (token) {
+      this.loadProfile();
+      this.loadRides();
+    }
+  }
+
+  // ── API klijent ────────────────────────────────────────────────
+  async api(path, opts = {}) {
+    const token = (typeof localStorage !== 'undefined') ? localStorage.getItem(TOKEN_KEY) : null;
+    const res = await fetch(API_BASE + path, {
+      method: opts.method || 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: 'Bearer ' + token } : {}),
+      },
+      body: opts.body ? JSON.stringify(opts.body) : undefined,
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error((data.error && data.error.message) || ('Greška ' + res.status));
+    return data.data;
+  }
+
+  // ── Mapiranje API podataka u oblik koji predložak očekuje ──────
+  mapRide(r, i) {
+    const prefs = (r.preferences ? String(r.preferences).split(',') : []).filter(Boolean).map((p) => PREF_LABELS[p] || p);
+    const av = AV_PALETTE[i % AV_PALETTE.length];
+    const seatsNum = Number(r.seats_available);
+    const item = {
+      id: r.id,
+      driver: ((r.first_name || '') + ' ' + (r.last_name || '')).trim(),
+      initials: initialsOf(r.first_name, r.last_name),
+      avBg: av.bg, avFg: av.fg,
+      rating: r.driver_rating != null ? String(r.driver_rating).replace('.', ',') : '—',
+      from: r.origin, to: r.destination,
+      time: fmtTime(r.departure_time),
+      seats: seatsNum + (seatsNum === 1 ? ' mjesto' : ' mjesta'),
+      seatsNum,
+      price: fmtEur(r.price) + ' €',
+      priceNum: Number(r.price),
+      tag1: prefs[0] || '—', tag2: prefs[1] || '', hasTag2: prefs.length > 1,
+      driverPhone: r.driver_phone || '',
+    };
+    item.onSelect = () => this.setState({ screen: 'detail', selectedRide: item, seats: 1 });
+    return item;
+  }
+
+  mapBooking(b) {
+    const st = STATUS_STYLE[b.status] || STATUS_STYLE.pending;
+    return {
+      id: b.id,
+      driver: ((b.driver_first_name || '') + ' ' + (b.driver_last_name || '')).trim(),
+      initials: initialsOf(b.driver_first_name, b.driver_last_name),
+      from: b.origin, to: b.destination,
+      when: fmtDateTime(b.departure_time),
+      price: fmtEur(b.price) + ' €',
+      statusLabel: st.label, statusBg: st.bg, statusColor: st.color,
+      isActive: b.status !== 'cancelled',
+      canCancel: b.status !== 'cancelled',
+      onCancel: () => this.cancelBooking(b.id),
+    };
+  }
+
+  mapNotif(n) {
+    const unread = !n.is_read;
+    return { id: n.id, message: n.message, ago: timeAgo(n.created_at), unread, cardBg: unread ? 'var(--primary-soft)' : 'var(--surface)' };
+  }
+
+  // ── Akcije ─────────────────────────────────────────────────────
+  async loginAAI() {
+    // U prototipu: simulirana AAI@EduHr prijava demo studentom (Ana Anić).
+    try {
+      this.setState({ busy: true });
+      const out = await this.api('/auth/aai/login', {
+        method: 'POST',
+        body: { email: 'astudent@student.unidu.hr', first_name: 'Ana', last_name: 'Anić' },
+      });
+      if (typeof localStorage !== 'undefined') localStorage.setItem(TOKEN_KEY, out.token);
+      this.setState({ me: out.user, screen: 'search', busy: false });
+      this.loadRides();
+    } catch (e) {
+      this.setState({ busy: false });
+      // Bez backenda ostajemo na demo podacima, ali svejedno uđemo u aplikaciju.
+      this.setState({ screen: 'search' });
+      if (typeof alert !== 'undefined') alert('Prijava nije uspjela (backend nedostupan?). Prikazujem demo podatke.\n\n' + e.message);
+    }
+  }
+
+  logout() {
+    if (typeof localStorage !== 'undefined') localStorage.removeItem(TOKEN_KEY);
+    this.setState({ me: null, apiRides: null, myBookings: [], notifs: [], screen: 'login' });
+  }
+
+  async loadProfile() {
+    try { const me = await this.api('/auth/me'); this.setState({ me }); } catch (_e) {}
+  }
+
+  async loadRides() {
+    try { const rows = await this.api('/rides'); this.setState({ apiRides: rows.map((r, i) => this.mapRide(r, i)) }); } catch (_e) {}
+  }
+
+  async loadBookings() {
+    try { const rows = await this.api('/bookings/me'); this.setState({ myBookings: rows.map((b) => this.mapBooking(b)) }); } catch (_e) {}
+  }
+
+  async loadNotifs() {
+    try { const rows = await this.api('/notifications'); this.setState({ notifs: rows.map((n) => this.mapNotif(n)) }); } catch (_e) {}
+  }
+
+  async reserve() {
+    const ride = this.state.selectedRide;
+    if (!ride || !ride.id) { this.setState({ screen: 'reservations' }); return; }
+    try {
+      this.setState({ busy: true });
+      await this.api('/rides/' + ride.id + '/bookings', { method: 'POST', body: { seats: this.state.seats } });
+      this.setState({ busy: false, screen: 'reservations' });
+      this.loadRides();
+      this.loadBookings();
+    } catch (e) {
+      this.setState({ busy: false });
+      if (typeof alert !== 'undefined') alert('Rezervacija nije uspjela: ' + e.message);
+    }
+  }
+
+  async cancelBooking(id) {
+    try {
+      await this.api('/bookings/' + id + '/cancel', { method: 'PATCH' });
+      this.loadBookings();
+      this.loadRides();
+    } catch (e) {
+      if (typeof alert !== 'undefined') alert('Otkazivanje nije uspjelo: ' + e.message);
+    }
+  }
+
+  async publishRide() {
+    const { newOrigin, newDestination } = this.state;
+    if (newOrigin === newDestination) {
+      if (typeof alert !== 'undefined') alert('Polazište i odredište ne smiju biti isti.');
+      return;
+    }
+    // Sastavi datum/vrijeme polaska (sutra u 07:25) prema sažetku iz forme.
+    const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(7, 25, 0, 0);
+    const departure = d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()) + 'T07:25:00';
+    try {
+      this.setState({ busy: true });
+      await this.api('/rides', {
+        method: 'POST',
+        body: {
+          origin: newOrigin, destination: newDestination,
+          departure_time: departure,
+          seats_available: this.state.nseats,
+          price: this.state.nprice / 100,
+          preferences: ['klima', 'glazba'],
+        },
+      });
+      this.setState({ busy: false, screen: 'reservations', step: 1 });
+      this.loadRides();
+      this.loadBookings();
+    } catch (e) {
+      this.setState({ busy: false });
+      if (typeof alert !== 'undefined') alert('Objava vožnje nije uspjela: ' + e.message);
+    }
+  }
+
+  async markAllRead() {
+    try { await this.api('/notifications/read-all', { method: 'PATCH' }); this.loadNotifs(); } catch (_e) {}
+  }
+
+  renderVals() {
+    const s = this.state;
+    const dark = s.dark;
+    const screen = s.screen;
+    const set = (o) => this.setState(o);
+    const fmt = (c) => (c / 100).toFixed(2).replace('.', ',');
+
+    const tbBase = { display:'inline-flex', alignItems:'center', gap:'6px', padding:'7px 12px', borderRadius:'999px', fontSize:'12.5px', fontWeight:700, cursor:'pointer', border:'1px solid #D5D7E2', background:'#F4F5FA', color:'#3A3D4D', whiteSpace:'nowrap', fontFamily:'inherit' };
+    const tbActive = { background:'#3538CD', color:'#fff', border:'1px solid #3538CD' };
+    const pill = (n) => screen === n ? { ...tbBase, ...tbActive } : tbBase;
+
+    const accent = '#3538CD', faint = dark ? '#6C7286' : '#8A8FA6', muted = dark ? '#A4A9BC' : '#5C6175';
+    const barOn = 'var(--primary)', barOff = 'var(--border)';
+
+    // Stil za chip lokacije (odabran / neodabran)
+    const chipStyle = (active) => active
+      ? { bg:'var(--primary)', color:'var(--on-primary)', border:'1px solid var(--primary)' }
+      : { bg:'var(--surface)', color:'var(--muted)', border:'1px solid var(--border)' };
+    const mkChips = (sel, key) => LOCATIONS.map((loc) => ({
+      name: loc, ...chipStyle(loc === sel), onSelect: () => this.setState({ [key]: loc }),
+    }));
+
+    // Žive vožnje iz baze (ili demo fallback dok backend nije pokrenut)
+    const rides = s.apiRides || MOCK_RIDES.map((m) => ({
+      ...m, onSelect: () => this.setState({ screen: 'detail', selectedRide: m, seats: 1 }),
+    }));
+
+    // Odabrana vožnja za ekran "Detalji" (s fallbackom na prvu)
+    const sel = s.selectedRide || rides[0] || {};
+    const selPrice = sel.priceNum != null ? sel.priceNum : 2.5;
+    const selSeatsMax = sel.seatsNum != null ? sel.seatsNum : 3;
+    const arrTime = (() => { // procijenjeno vrijeme dolaska (+14 min)
+      const t = sel.time || '07:40'; const [h, m] = t.split(':').map(Number);
+      const d = new Date(); d.setHours(h, (m || 0) + 14); return pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+    })();
+
+    const me = s.me;
+
+    return {
+      theme: dark ? 'dark' : 'light',
+      statusDark: dark || screen === 'login',
+      darkOn: dark, lightOn: !dark,
+      showToolbar: false, // fullscreen prikaz – dev alatna traka skrivena
+      isLogin: screen==='login', isSearch: screen==='search', isDetail: screen==='detail',
+      isNew: screen==='new', isRes: screen==='reservations', isProfile: screen==='profile', isNotif: screen==='notifications',
+      goLogin:()=>set({screen:'login'}), goSearch:()=>set({screen:'search'}),
+      goDetail:()=>set({screen:'detail', seats:1}), goNew:()=>set({screen:'new', step:1}),
+      goRes:()=>{ set({screen:'reservations'}); this.loadBookings(); },
+      goProfile:()=>{ set({screen:'profile'}); this.loadProfile(); },
+      goNotif:()=>{ set({screen:'notifications'}); this.loadNotifs(); },
+      toggleDark:()=>set({dark:!dark}),
+      // FZ-1: prijava / odjava
+      loginAAI:()=>this.loginAAI(), logout:()=>this.logout(),
+      // FZ-3: ponovno učitavanje vožnji ("Traži vožnje")
+      doSearch:()=>this.loadRides(),
+      pLogin:pill('login'), pSearch:pill('search'), pDetail:pill('detail'), pNew:pill('new'),
+      pRes:pill('reservations'), pProfile:pill('profile'), pNotif:pill('notifications'),
+      rides, ridesCount: rides.length + (rides.length===1?' dostupna vožnja':' dostupnih vožnji'),
+      // FZ-5: detalji odabrane vožnje
+      detDriver: sel.driver || 'Vozač', detInitials: sel.initials || '–',
+      detAvBg: sel.avBg || '#E7E9FB', detAvFg: sel.avFg || '#3F43C4',
+      detRating: sel.rating || '—', detFrom: sel.from || '', detTo: sel.to || '',
+      detTime: sel.time || '', detArr: arrTime, detFree: selSeatsMax,
+      detSeats:s.seats, detTotal:fmtEur(selPrice*s.seats),
+      seatInc:()=>set({seats:Math.min(selSeatsMax, s.seats+1)}), seatDec:()=>set({seats:Math.max(1, s.seats-1)}),
+      reserve:()=>this.reserve(),
+      step:s.step, isStep1:s.step===1, isStep2:s.step===2, isStep3:s.step===3, isStep4:s.step===4,
+      notStep4: s.step!==4,
+      stepNext:()=>set({step:Math.min(4, s.step+1)}), stepBack:()=>set({step:Math.max(1, s.step-1)}),
+      publishRide:()=>this.publishRide(),
+      s2bar: s.step>=2 ? barOn : barOff, s3bar: s.step>=3 ? barOn : barOff, s4bar: s.step>=4 ? barOn : barOff,
+      s1col:'var(--primary)', s2col: s.step>=2 ? 'var(--primary)' : faint, s3col: s.step>=3 ? 'var(--primary)' : faint, s4col: s.step>=4 ? 'var(--primary)' : faint,
+      newOrigin:s.newOrigin, newDestination:s.newDestination,
+      newRoute: s.newOrigin + ' → ' + s.newDestination,
+      originChips: mkChips(s.newOrigin, 'newOrigin'),
+      destChips: mkChips(s.newDestination, 'newDestination'),
+      newSeats:s.nseats, newPrice:fmt(s.nprice),
+      nseatInc:()=>set({nseats:Math.min(4, s.nseats+1)}), nseatDec:()=>set({nseats:Math.max(1, s.nseats-1)}),
+      npriceInc:()=>set({nprice:Math.min(1500, s.nprice+50)}), npriceDec:()=>set({nprice:Math.max(0, s.nprice-50)}),
+      // FZ-10: moje rezervacije / FZ-12: obavijesti
+      myBookings: s.myBookings, hasBookings: s.myBookings.length>0,
+      notifs: s.notifs, hasNotifs: s.notifs.length>0, markAllRead:()=>this.markAllRead(),
+      // FZ-2: profil
+      profName: me ? ((me.first_name||'')+' '+(me.last_name||'')).trim() : 'Antonio Butijer',
+      profInitials: me ? initialsOf(me.first_name, me.last_name) : 'AB',
+      profRating: me && me.avg_rating!=null ? String(me.avg_rating).replace('.',',') : '4,8',
+      darkSwitchBg: dark ? 'var(--primary)' : '#CDD0DC', darkKnobX: dark ? '23px' : '3px',
+    };
+  }
+}
+</script>
+</body>
+</html>
